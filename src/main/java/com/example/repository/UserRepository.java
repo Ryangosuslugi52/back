@@ -9,5 +9,5 @@ import java.util.UUID;
 @Repository
 public interface UserRepository extends CrudRepository<User, UUID> {
     Optional<User> findByLogin(String login);
-    Optional<User> findFirst(); // Заглушка для получения автора по умолчанию
+    Optional<User> findFirst();
 }

@@ -1,6 +1,7 @@
 package com.example.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.micronaut.serde.annotation.Serdeable;
 import jakarta.persistence.*;
 import java.util.UUID;
@@ -17,7 +18,7 @@ public class User {
     private String login;
 
     @Column(nullable = false)
-    @JsonIgnore
+    @com.fasterxml.jackson.annotation.JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     public UUID getId() {

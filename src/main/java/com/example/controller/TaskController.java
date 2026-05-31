@@ -2,7 +2,11 @@ package com.example.controller;
 
 import com.example.domain.Task;
 import com.example.domain.TaskStatus;
+import com.example.domain.User;
 import com.example.dto.PaginatedTasksResponse;
+import com.example.dto.CreateTaskRequest;
+import com.example.dto.UpdateTaskRequest;
+import com.example.dto.ChangeStatusRequest;
 import com.example.service.TaskService;
 import com.example.service.UserService;
 import com.example.service.ProjectService;
@@ -10,11 +14,11 @@ import io.micronaut.http.annotation.*;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.exceptions.HttpStatusException;
 import io.micronaut.core.annotation.Nullable;
-import java.util.Map;
+import jakarta.transaction.Transactional;
+
 import java.util.UUID;
 
-
-@Controller("/v1/tasks")
+@Controller("/v1/tasks") // 🔥 Вернули главную аннотацию
 public class TaskController {
     private final TaskService taskService;
     private final UserService userService;
@@ -27,30 +31,50 @@ public class TaskController {
     }
 
     @Get
+    @Transactional
     public PaginatedTasksResponse list(
-            @Nullable @QueryValue UUID projectId,
+            @Nullable @QueryValue UUID projectId, // Очистили от мусора
             @Nullable @QueryValue TaskStatus status,
             @QueryValue(defaultValue = "1") int page,
-            @QueryValue(defaultValue = "10") int limit) {
+            @QueryValue(defaultValue = "20") int limit) {
         return taskService.getPaginatedTasks(projectId, status, page, limit);
     }
 
     @Post
     @Status(HttpStatus.CREATED)
-    public Task create(@Body Map<String, String> body) {
+    public Task create(@Nullable @Header("Authorization") String authorization, @Body CreateTaskRequest request) { // 🔥 Исправили на @Header
         Task task = new Task();
-        task.setTitle(body.get("title"));
-        task.setDescription(body.get("description"));
+        task.setTitle(request.title());
+        task.setDescription(request.description());
 
-        UUID projectId = UUID.fromString(body.get("projectId"));
+        if (request.projectId() == null) {
+            throw new HttpStatusException(HttpStatus.BAD_REQUEST, "ProjectId is required");
+        }
+
+        UUID projectId = UUID.fromString(request.projectId());
         task.setProject(projectService.findById(projectId)
                 .orElseThrow(() -> new HttpStatusException(HttpStatus.BAD_REQUEST, "Project not found")));
 
-        task.setAuthor(userService.getDefaultAuthor()
-                .orElseThrow(() -> new HttpStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "No users in DB")));
+        // Вытаскиваем реального автора из токена авторизации
+        User author = null;
+        if (authorization != null && authorization.startsWith("Bearer fake-token-")) {
+            try {
+                String userIdStr = authorization.substring("Bearer fake-token-".length()).trim();
+                UUID userId = UUID.fromString(userIdStr);
+                author = userService.findById(userId).orElse(null);
+            } catch (Exception e) {
+                // Подстраховка
+            }
+        }
 
-        if (body.get("assigneeId") != null) {
-            UUID assigneeId = UUID.fromString(body.get("assigneeId"));
+        if (author == null) {
+            author = userService.getDefaultAuthor()
+                    .orElseThrow(() -> new HttpStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "No users in DB"));
+        }
+        task.setAuthor(author);
+
+        if (request.assigneeId() != null) {
+            UUID assigneeId = UUID.fromString(request.assigneeId());
             task.setAssignee(userService.findById(assigneeId).orElse(null));
         }
 
@@ -63,24 +87,27 @@ public class TaskController {
                 .orElseThrow(() -> new HttpStatusException(HttpStatus.NOT_FOUND, "Task not found"));
     }
 
-    @Patch("/{taskId}")
-    public Task update(@PathVariable UUID taskId, @Body Map<String, String> body) {
+    @Put("/{taskId}") // 🔥 Вернули аннотацию обновления
+    public Task update(@PathVariable UUID taskId, @Body UpdateTaskRequest request) {
         Task updatedData = new Task();
-        if (body.containsKey("title")) updatedData.setTitle(body.get("title"));
-        if (body.containsKey("description")) updatedData.setDescription(body.get("description"));
-        if (body.containsKey("assigneeId")) {
-            UUID assigneeId = UUID.fromString(body.get("assigneeId"));
+        if (request.title() != null) updatedData.setTitle(request.title());
+        if (request.description() != null) updatedData.setDescription(request.description());
+        if (request.assigneeId() != null) {
+            UUID assigneeId = UUID.fromString(request.assigneeId());
             updatedData.setAssignee(userService.findById(assigneeId).orElse(null));
         }
-
         return taskService.updateTask(taskId, updatedData)
                 .orElseThrow(() -> new HttpStatusException(HttpStatus.NOT_FOUND, "Task not found"));
     }
 
-    @Post("/{taskId}/status")
-    public Task changeStatus(@PathVariable UUID taskId, @Body Map<String, String> body) {
-        TaskStatus newStatus = TaskStatus.valueOf(body.get("status"));
-        return taskService.changeStatus(taskId, newStatus)
-                .orElseThrow(() -> new HttpStatusException(HttpStatus.NOT_FOUND, "Task not found"));
+    @Put("/{taskId}/status") // 🔥 Вернули аннотацию изменения статуса
+    public Task changeStatus(@PathVariable UUID taskId, @Body ChangeStatusRequest request) {
+        try {
+            TaskStatus newStatus = TaskStatus.valueOf(request.status());
+            return taskService.changeStatus(taskId, newStatus)
+                    .orElseThrow(() -> new HttpStatusException(HttpStatus.NOT_FOUND, "Task not found"));
+        } catch (IllegalArgumentException e) {
+            throw new HttpStatusException(HttpStatus.BAD_REQUEST, "Invalid status value");
+        }
     }
 }

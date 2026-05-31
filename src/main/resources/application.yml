@@ -1,0 +1,9 @@
+micronaut.application.name: "demo3"
+
+datasources.default.url: "jdbc:postgresql://localhost:5432/taskmanager"
+datasources.default.username: "postgres"
+datasources.default.password: "qwertyuiop2006"
+datasources.default.driverClassName: "org.postgresql.Driver"
+
+jpa.default.properties.hibernate.hbm2ddl.auto: "update"
+jpa.default.properties.hibernate.dialect: "org.hibernate.dialect.PostgreSQLDialect"

@@ -4,6 +4,7 @@ import com.example.domain.User;
 import com.example.service.UserService;
 import io.micronaut.http.annotation.*;
 import io.micronaut.http.HttpStatus;
+import io.micronaut.http.MediaType;
 import java.util.Map;
 
 @Controller("/v1/auth")
@@ -20,7 +21,7 @@ public class AuthController {
         return userService.register(user);
     }
 
-    @Post(value = "/token", consumes = io.micronaut.http.MediaType.APPLICATION_FORM_URLENCODED)
+    @Post(value = "/token", consumes = MediaType.APPLICATION_FORM_URLENCODED)
     public Map<String, Object> token(@Body Map<String, String> body) {
         String username = body.get("username");
         String password = body.get("password");

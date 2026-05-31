@@ -30,7 +30,7 @@ public class Task {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
-    @JsonIgnore // Игнорируем сам объект в JSON
+    @JsonIgnore
     private Project project;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -56,7 +56,19 @@ public class Task {
     public String getAuthorIdString() { return author != null ? author.getId().toString() : null; }
 
     @JsonProperty("assigneeId")
-    public String getAssigneeIdString() { return assignee != null ? assignee.getId().toString() : null; }
+    public String getAssigneeIdString() {
+        return assignee != null ? assignee.getId().toString() : null;
+    }
+
+    @JsonProperty("authorLogin")
+    public String getAuthorLogin() {
+        return author != null ? author.getLogin() : null;
+    }
+
+    @JsonProperty("assigneeLogin")
+    public String getAssigneeLogin() {
+        return assignee != null ? assignee.getLogin() : null;
+    }
 
     public UUID getId() {
         return id;

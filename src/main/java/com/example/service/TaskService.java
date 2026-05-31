@@ -8,6 +8,8 @@ import com.example.repository.TaskRepository;
 import io.micronaut.data.model.Page;
 import io.micronaut.data.model.Pageable;
 import jakarta.inject.Singleton;
+import jakarta.transaction.Transactional;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,6 +31,7 @@ public class TaskService {
         return taskRepository.save(task);
     }
 
+    @Transactional
     public PaginatedTasksResponse getPaginatedTasks(UUID projectId, TaskStatus status, int page, int limit) {
         Pageable pageable = Pageable.from(page - 1, limit);
         Page<Task> taskPage;
